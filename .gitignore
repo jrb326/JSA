@@ -1,0 +1,63 @@
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Editors/IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+node_modules/
+.bower_components/
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.venv/
+venv/
+env/
+.pip-wheel-metadata/
+
+# Build outputs and caches
+dist/
+build/
+out/
+coverage/
+.cache/
+
+# Env files
+.env
+.env.*.local
+*.env
+*.env.local
+
+# Docker
+docker-data/
+*.pid
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Archives
+*.tgz
+*.tar.gz
+*.zip
