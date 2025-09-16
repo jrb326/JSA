@@ -1,0 +1,73 @@
+# Mimir configuration file
+target: all,alertmanager
+
+server:
+  http_listen_port: 9090
+  grpc_listen_port: 9095
+  log_level: info
+
+multitenancy_enabled: false
+
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/blocks
+  tsdb:
+    dir: /data/tsdb
+
+compactor:
+  data_dir: /data/compactor
+  sharding_ring:
+    kvstore:
+      store: memberlist
+
+distributor:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: memberlist
+
+ingester:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: memberlist
+    replication_factor: 1
+
+ruler_storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/ruler-store
+
+ruler:
+  rule_path: /data/rules-tmp
+  ring:
+    kvstore:
+      store: memberlist
+
+store_gateway:
+  sharding_ring:
+    replication_factor: 1
+
+alertmanager:
+  data_dir: /data/alertmanager-data
+  enable_api: true
+  external_url: /alertmanager
+  fallback_config_file: /etc/alertmanager-fallback-config.yaml
+
+alertmanager_storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/alertmanager-store
+
+memberlist:
+  abort_if_cluster_join_fails: false
+  bind_port: 7946
+  join_members:
+    - mimir:7946
+
+limits:
+  ingestion_rate: 20000
+  ingestion_burst_size: 200000
+  max_global_series_per_user: 150000
+  max_global_series_per_metric: 20000

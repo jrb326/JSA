@@ -1,0 +1,373 @@
+services:
+  traefik:
+    image: traefik:v3.5.2
+    container_name: traefik
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --api.dashboard=true
+      - --entrypoints.web.address=:80
+    ports:
+      - 80:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.traefik.rule=Host(`traefik.localhost`)
+      - traefik.http.routers.traefik.entrypoints=web
+      - traefik.http.routers.traefik.service=api@internal
+    networks:
+      - web
+
+  mimir:
+    image: grafana/mimir:2.12.0
+    container_name: mimir
+    ports: []
+    restart: unless-stopped
+    command: --config.file=/etc/mimir.yaml
+    volumes:
+      - ./services/mimir/mimir.yaml:/etc/mimir.yaml
+      - ./services/mimir/alertmanager.yaml:/etc/alertmanager-fallback-config.yaml
+      - ./data/volume/mimir:/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.mimir.rule=Host(`mimir.localhost`)
+      - traefik.http.routers.mimir.entrypoints=web
+      - traefik.http.services.mimir.loadbalancer.server.port=9090
+    networks:
+      - default
+      - web
+ 
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    environment:
+      - JAEGER_AGENT_HOST=otelcol
+    volumes:
+      - ./data/volume/loki:/loki
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.loki.rule=Host(`loki.localhost`)
+      - traefik.http.routers.loki.entrypoints=web
+      - traefik.http.services.loki.loadbalancer.server.port=3100
+    networks:
+      - default
+      - web
+
+  grafana:
+    image: grafana/grafana:11.0.1
+    container_name: grafana
+    restart: unless-stopped
+    ports: []
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - ./services/grafana/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      # - ./services/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./data/volume/grafana:/var/lib/grafana
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.grafana.rule=Host(`grafana.localhost`)
+      - traefik.http.routers.grafana.entrypoints=web
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    networks:
+      - default
+      - web
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./services/tempo/tempo.yaml:/etc/tempo.yaml
+      - ./data/volume/tempo:/tmp/tempo
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.tempo.rule=Host(`tempo.localhost`)
+      - traefik.http.routers.tempo.entrypoints=web
+      - traefik.http.services.tempo.loadbalancer.server.port=3200
+    networks:
+      - default
+      - web
+
+  ## Tools
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    ports: []
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./services/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/volume/prometheus:/prometheus
+    depends_on:
+      - mimir
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)
+      - traefik.http.routers.prometheus.entrypoints=web
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    networks:
+      - default
+      - web
+
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    container_name: pushgateway
+    ports: []
+    restart: unless-stopped
+    command:
+      - '--web.listen-address=:9091'
+      - '--web.telemetry-path=/metrics'
+      - '--persistence.file=/tmp/pushgateway.db'
+      - '--persistence.interval=5m'
+      - '--log.level=info'
+    volumes:
+      - ./data/volume/pushgateway:/tmp
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.pushgateway.rule=Host(`pushgateway.localhost`)
+      - traefik.http.routers.pushgateway.entrypoints=web
+      - traefik.http.services.pushgateway.loadbalancer.server.port=9091
+    networks:
+      - default
+      - web
+
+  promtail:
+    image: grafana/promtail:2.9.5
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log
+      - ./services/promtail/config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: otelcol
+    # restart: unless-stopped
+    ports: []
+    command: --config=/etc/otelcol/config.yaml
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+      - grafana
+    volumes:
+      - ./services/otelcol/config.yaml:/etc/otelcol/config.yaml
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.otelcol.rule=Host(`otelcol.localhost`)
+      - traefik.http.routers.otelcol.entrypoints=web
+      - traefik.http.services.otelcol.loadbalancer.server.port=8888
+    networks:
+      - default
+      - web
+
+  # LibreNMS stack
+  db:
+    image: mysql:8.0
+    container_name: librenms_db
+    command:
+      - "mysqld"
+      - "--innodb-file-per-table=1"
+      - "--lower_case_table_names=1"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - ./data/volume/db:/var/lib/mysql
+    environment:
+      TZ: ${TZ:-UTC}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-librenms}
+      MYSQL_USER: ${MYSQL_USER:-librenms}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-librenms}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: librenms_redis
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./data/volume/redis:/data
+    restart: unless-stopped
+
+  msmtpd:
+    image: crazymax/msmtpd:latest
+    container_name: librenms_msmtpd
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-smtp.example.com}
+    restart: unless-stopped
+
+  rrdcached:
+    image: crazymax/rrdcached
+    container_name: librenms_rrdcached
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      LOG_LEVEL: LOG_INFO
+      WRITE_TIMEOUT: 1800
+      WRITE_JITTER: 1800
+      WRITE_THREADS: 4
+      FLUSH_DEAD_DATA_INTERVAL: 3600
+    volumes:
+      - ./data/volume/librenms/rrd:/data/db
+      - ./data/volume/rrd-journal:/data/journal
+    restart: unless-stopped
+
+  librenms:
+    image: librenms/librenms:latest
+    container_name: librenms
+    hostname: librenms
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      msmtpd:
+        condition: service_started
+      rrdcached:
+        condition: service_started
+    volumes:
+      - ./data/volume/librenms:/data
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE:-librenms}
+      DB_USER: ${MYSQL_USER:-librenms}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-librenms}
+      DB_TIMEOUT: 60
+      RRDCACHED_SERVER: rrdcached:42217
+      REDIS_HOST: redis
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.librenms.rule=Host(`librenms.localhost`)
+      - traefik.http.routers.librenms.entrypoints=web
+      - traefik.http.services.librenms.loadbalancer.server.port=8000
+    networks:
+      - default
+      - web
+
+  dispatcher:
+    image: librenms/librenms:latest
+    container_name: librenms_dispatcher
+    hostname: librenms-dispatcher
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      db:
+        condition: service_healthy
+      librenms:
+        condition: service_started
+      redis:
+        condition: service_started
+    volumes:
+      - ./data/volume/librenms:/data
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE:-librenms}
+      DB_USER: ${MYSQL_USER:-librenms}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-librenms}
+      DB_TIMEOUT: 60
+      DISPATCHER_NODE_ID: dispatcher1
+      SIDECAR_DISPATCHER: 1
+      RRDCACHED_SERVER: rrdcached:42217
+      REDIS_HOST: redis
+    restart: unless-stopped
+
+  syslogng:
+    image: librenms/librenms:latest
+    container_name: librenms_syslog
+    # keep sidecar without exposing host ports
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      librenms:
+        condition: service_started
+    volumes:
+      - ./data/volume/librenms:/data
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE:-librenms}
+      DB_USER: ${MYSQL_USER:-librenms}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-librenms}
+      DB_TIMEOUT: 60
+      SIDECAR_SYSLOGNG: 1
+    ports:
+      - "514:514"
+      - "514:514/udp"
+
+  snmptrapd:
+    image: librenms/librenms:latest
+    container_name: librenms_snmptrapd
+    # keep sidecar without exposing host ports
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      librenms:
+        condition: service_started
+    volumes:
+      - ./data/volume/librenms:/data
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE:-librenms}
+      DB_USER: ${MYSQL_USER:-librenms}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-librenms}
+      DB_TIMEOUT: 60
+      SIDECAR_SNMPTRAPD: 1
+    ports:
+      - "162:162"
+      - "162:162/udp"
+
+networks:
+  web:
+    name: web
+    driver: bridge
