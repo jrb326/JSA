@@ -14,7 +14,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.traefik.rule=Host(`traefik.localhost`)
+      - traefik.http.routers.traefik.rule=Host(`traefik.jsa.cse.lehigh.edu`)
       - traefik.http.routers.traefik.entrypoints=web
       - traefik.http.routers.traefik.service=api@internal
     networks:
@@ -33,7 +33,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.mimir.rule=Host(`mimir.localhost`)
+      - traefik.http.routers.mimir.rule=Host(`mimir.jsa.cse.lehigh.edu`)
       - traefik.http.routers.mimir.entrypoints=web
       - traefik.http.services.mimir.loadbalancer.server.port=9090
     networks:
@@ -51,7 +51,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.loki.rule=Host(`loki.localhost`)
+      - traefik.http.routers.loki.rule=Host(`loki.jsa.cse.lehigh.edu`)
       - traefik.http.routers.loki.entrypoints=web
       - traefik.http.services.loki.loadbalancer.server.port=3100
     networks:
@@ -79,7 +79,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.grafana.rule=Host(`grafana.localhost`)
+      - traefik.http.routers.grafana.rule=Host(`grafana.jsa.cse.lehigh.edu`)
       - traefik.http.routers.grafana.entrypoints=web
       - traefik.http.services.grafana.loadbalancer.server.port=3000
     networks:
@@ -96,7 +96,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.tempo.rule=Host(`tempo.localhost`)
+      - traefik.http.routers.tempo.rule=Host(`tempo.jsa.cse.lehigh.edu`)
       - traefik.http.routers.tempo.entrypoints=web
       - traefik.http.services.tempo.loadbalancer.server.port=3200
     networks:
@@ -124,7 +124,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.jsa.cse.lehigh.edu`)
       - traefik.http.routers.prometheus.entrypoints=web
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
     networks:
@@ -147,7 +147,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.pushgateway.rule=Host(`pushgateway.localhost`)
+      - traefik.http.routers.pushgateway.rule=Host(`pushgateway.jsa.cse.lehigh.edu`)
       - traefik.http.routers.pushgateway.entrypoints=web
       - traefik.http.services.pushgateway.loadbalancer.server.port=9091
     networks:
@@ -178,7 +178,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.otelcol.rule=Host(`otelcol.localhost`)
+      - traefik.http.routers.otelcol.rule=Host(`otelcol.jsa.cse.lehigh.edu`)
       - traefik.http.routers.otelcol.entrypoints=web
       - traefik.http.services.otelcol.loadbalancer.server.port=8888
     networks:
@@ -277,7 +277,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.librenms.rule=Host(`librenms.localhost`)
+      - traefik.http.routers.librenms.rule=Host(`librenms.jsa.cse.lehigh.edu`)
       - traefik.http.routers.librenms.entrypoints=web
       - traefik.http.services.librenms.loadbalancer.server.port=8000
     networks:
