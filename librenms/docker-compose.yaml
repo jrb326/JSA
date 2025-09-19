@@ -6,17 +6,22 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --api.dashboard=true
-      - --entrypoints.web.address=:443
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --providers.docker.network=web
     ports:
+      - 80:80
       - 443:443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      # - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.rule=Host(`traefik.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.traefik.entrypoints=web
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.service=api@internal
     networks:
       - web
@@ -35,7 +40,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.mimir.rule=Host(`mimir.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.mimir.entrypoints=web
+      - traefik.http.routers.mimir.entrypoints=websecure
+      - traefik.http.routers.mimir.tls=true
       - traefik.http.services.mimir.loadbalancer.server.port=9090
     networks:
       - default
@@ -53,7 +59,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.loki.rule=Host(`loki.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.loki.entrypoints=web
+      - traefik.http.routers.loki.entrypoints=websecure
+      - traefik.http.routers.loki.tls=true
       - traefik.http.services.loki.loadbalancer.server.port=3100
     networks:
       - default
@@ -81,7 +88,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.grafana.rule=Host(`grafana.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.grafana.entrypoints=web
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
       - traefik.http.services.grafana.loadbalancer.server.port=3000
     networks:
       - default
@@ -98,7 +106,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.tempo.rule=Host(`tempo.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.tempo.entrypoints=web
+      - traefik.http.routers.tempo.entrypoints=websecure
+      - traefik.http.routers.tempo.tls=true
       - traefik.http.services.tempo.loadbalancer.server.port=3200
     networks:
       - default
@@ -127,7 +136,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.prometheus.rule=Host(`prometheus.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.prometheus.entrypoints=web
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls=true
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
     networks:
       - default
@@ -150,7 +160,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.pushgateway.rule=Host(`pushgateway.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.pushgateway.entrypoints=web
+      - traefik.http.routers.pushgateway.entrypoints=websecure
+      - traefik.http.routers.pushgateway.tls=true
       - traefik.http.services.pushgateway.loadbalancer.server.port=9091
     networks:
       - default
@@ -181,7 +192,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.otelcol.rule=Host(`otelcol.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.otelcol.entrypoints=web
+      - traefik.http.routers.otelcol.entrypoints=websecure
+      - traefik.http.routers.otelcol.tls=true
       - traefik.http.services.otelcol.loadbalancer.server.port=8888
     networks:
       - default
@@ -280,7 +292,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.librenms.rule=Host(`librenms.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.librenms.entrypoints=web
+      - traefik.http.routers.librenms.entrypoints=websecure
+      - traefik.http.routers.librenms.tls=true
       - traefik.http.services.librenms.loadbalancer.server.port=8000
     networks:
       - default
