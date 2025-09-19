@@ -165,6 +165,7 @@ services:
       - traefik.http.routers.pushgateway.rule=Host(`pushgateway.jsa.cse.lehigh.edu`)
       - traefik.http.routers.pushgateway.entrypoints=web
       - traefik.http.middlewares.pushgateway.ipallowlist.sourcerange=128.180.120.29
+      - traefik.http.routers.pushgateway.middlewares=pushgateway
       # - traefik.http.routers.pushgateway.tls=true
       - traefik.http.services.pushgateway.loadbalancer.server.port=9091
     networks:
