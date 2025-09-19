@@ -163,7 +163,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       - traefik.http.routers.pushgateway.rule=Host(`pushgateway.jsa.cse.lehigh.edu`)
-      - traefik.http.routers.pushgateway.entrypoints=websecure
+      - traefik.http.routers.pushgateway.entrypoints=websecure,web
       - traefik.http.routers.pushgateway.tls=true
       - traefik.http.services.pushgateway.loadbalancer.server.port=9091
     networks:
