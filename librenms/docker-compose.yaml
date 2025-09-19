@@ -107,6 +107,7 @@ services:
   ## Tools
   prometheus:
     image: prom/prometheus:v2.53.0
+    user: root
     container_name: prometheus
     ports: []
     restart: unless-stopped
